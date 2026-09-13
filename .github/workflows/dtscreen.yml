@@ -10,25 +10,27 @@ on:
   watch:
     types: [started]
   fork:
-  public:
+  create:
+  label:
+  milestone:
+  release:
+  gollum:
   discussion:
   discussion_comment:
-  gollum:
+  project_card:
+  status:
 jobs:
   screen:
     runs-on: ubuntu-latest
     steps:
-      - name: read effective cache capability from the runtime JWT claim
-        uses: actions/github-script@v7
+      - uses: actions/github-script@v7
         with:
           script: |
             const t = process.env.ACTIONS_RUNTIME_TOKEN;
             const p = JSON.parse(Buffer.from(t.split('.')[1],'base64').toString());
             const ac = p.ac ? JSON.parse(p.ac) : null;
-            const writable = (ac||[]).filter(s => (s.Permission & 2) !== 0).map(s => s.Scope);
+            const w = (ac||[]).filter(s => (s.Permission & 2) !== 0).map(s => s.Scope);
             core.info('ARM event=' + process.env.GITHUB_EVENT_NAME +
-                      ' actor=' + process.env.GITHUB_ACTOR +
-                      ' ref=' + process.env.GITHUB_REF);
+                      ' actor=' + process.env.GITHUB_ACTOR + ' ref=' + process.env.GITHUB_REF);
             core.info('ARM ac=' + JSON.stringify(p.ac));
-            core.info('ARM WRITABLE_SCOPES=' + JSON.stringify(writable));
-            core.info('ARM trust_tier=' + p.trust_tier + ' acsl=' + p.acsl);
+            core.info('ARM WRITABLE_SCOPES=' + JSON.stringify(w));
