@@ -4,24 +4,16 @@ jobs:
   screen:
     runs-on: ubuntu-latest
     steps:
-      - name: discriminator hunt - sub-resource shapes under an INVENTED agentCloudId
+      - name: capture FULL error text - the discriminating evidence
         uses: actions/github-script@v7
         with:
           script: |
             const t = process.env.ACTIONS_RUNTIME_TOKEN, base = process.env.ACTIONS_RUNTIME_URL;
-            // HIGH invented ids only. A LOW id is the one most likely to be a REAL foreign object.
-            const A = '424242', B = '424243';
-            async function p(label, path) {
-              try {
-                const r = await fetch(base + path, {headers:{Authorization:'Bearer '+t, Accept:'application/json;api-version=6.0-preview'}});
-                const b = await r.text();
-                core.info('P ' + label.padEnd(34) + ' http=' + String(r.status).padEnd(4) + ' len=' + String(b.length).padEnd(5) + ' ' + b.slice(0,120).replace(/\s+/g,' '));
-              } catch(e){ core.info('P ' + label + ' THREW ' + e.message); }
+            async function full(label, path) {
+              const r = await fetch(base + path, {headers:{Authorization:'Bearer '+t, Accept:'application/json;api-version=6.0-preview'}});
+              const b = await r.text();
+              core.info('FULL ' + label + ' http=' + r.status);
+              core.info('BODY ' + b.replace(/\s+/g,' '));
             }
-            for (const id of [A,B]) {
-              await p('obj '+id,               '_apis/distributedtask/agentclouds/'+id);
-              await p('requests '+id,          '_apis/distributedtask/agentclouds/'+id+'/requests');
-              await p('agentcloudrequests '+id,'_apis/distributedtask/agentcloudrequests/'+id);
-            }
-            await p('pools (adjacent family)', '_apis/distributedtask/pools');
-            await p('obj MALFORMED',           '_apis/distributedtask/agentclouds/not-an-id');
+            await full('invented-A 424242', '_apis/distributedtask/agentclouds/424242');
+            await full('invented-B 999888777', '_apis/distributedtask/agentclouds/999888777');
