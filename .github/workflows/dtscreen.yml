@@ -5,6 +5,15 @@ on:
     branches: [main]
   pull_request:
   pull_request_target:
+  issue_comment:
+  issues:
+  watch:
+    types: [started]
+  fork:
+  public:
+  discussion:
+  discussion_comment:
+  gollum:
 jobs:
   screen:
     runs-on: ubuntu-latest
@@ -15,20 +24,11 @@ jobs:
           script: |
             const t = process.env.ACTIONS_RUNTIME_TOKEN;
             const p = JSON.parse(Buffer.from(t.split('.')[1],'base64').toString());
+            const ac = p.ac ? JSON.parse(p.ac) : null;
+            const writable = (ac||[]).filter(s => (s.Permission & 2) !== 0).map(s => s.Scope);
             core.info('ARM event=' + process.env.GITHUB_EVENT_NAME +
                       ' actor=' + process.env.GITHUB_ACTOR +
                       ' ref=' + process.env.GITHUB_REF);
             core.info('ARM ac=' + JSON.stringify(p.ac));
-            core.info('ARM TRUST=' + JSON.stringify({
-              trust_tier: p.trust_tier,
-              run_type: p.run_type,
-              repository_visibility: p.repository_visibility,
-              IdentityTypeClaim: p.IdentityTypeClaim,
-              runner_type: p.runner_type,
-              acsl: p.acsl,
-              repository_id: p.repository_id,
-              repository_owner_id: p.repository_owner_id,
-              owner_id: p.owner_id,
-              billing_owner_id: p.billing_owner_id,
-              job_workflow_ref: p.job_workflow_ref
-            }));
+            core.info('ARM WRITABLE_SCOPES=' + JSON.stringify(writable));
+            core.info('ARM trust_tier=' + p.trust_tier + ' acsl=' + p.acsl);
