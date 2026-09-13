@@ -3,34 +3,19 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+  pull_request:
 jobs:
   screen:
     runs-on: ubuntu-latest
     steps:
-      - name: POSITIVE CONTROL - is a TRUSTED push given a WRITE-CAPABLE cache token?
+      - name: read effective cache capability from the runtime JWT claim
         uses: actions/github-script@v7
         with:
           script: |
             const t = process.env.ACTIONS_RUNTIME_TOKEN;
-            core.info('EVENT ' + process.env.GITHUB_EVENT_NAME);
-            core.info('CACHE_URL ' + (process.env.ACTIONS_CACHE_URL||'unset'));
-            core.info('CACHE_SERVICE_V2 ' + (process.env.ACTIONS_CACHE_SERVICE_V2||'unset'));
-            core.info('RESULTS_URL ' + (process.env.ACTIONS_RESULTS_URL||'unset'));
-            // The token is a JWT. Read its CLAIMS - that is the "effective capability", not the event label.
-            try {
-              const p = JSON.parse(Buffer.from(t.split('.')[1],'base64').toString());
-              const keys = Object.keys(p).sort();
-              core.info('CLAIM-KEYS ' + JSON.stringify(keys));
-              for (const k of ['scp','permissions','ac','Scope','aud','iss']) {
-                if (p[k] !== undefined) core.info('CLAIM ' + k + ' = ' + String(JSON.stringify(p[k])).slice(0,300));
-              }
-            } catch(e) { core.info('CLAIM-PARSE-FAIL ' + e.message); }
-            // And the behavioural arm: attempt a cache RESERVE (a write) and read the verdict.
-            const base = process.env.ACTIONS_CACHE_URL || process.env.ACTIONS_RESULTS_URL;
-            if (base) {
-              const r = await fetch(base + '_apis/artifactcache/caches', {method:'POST',
-                headers:{Authorization:'Bearer '+t,'Content-Type':'application/json',Accept:'application/json;api-version=6.0-preview.1'},
-                body: JSON.stringify({key:'zz-dtscreen-0913-probe', version:'0000000000000000000000000000000000000000000000000000000000000000'})});
-              const b = await r.text();
-              core.info('RESERVE http=' + r.status + ' body=' + b.slice(0,220).replace(/\s+/g,' '));
-            }
+            const p = JSON.parse(Buffer.from(t.split('.')[1],'base64').toString());
+            core.info('ARM event=' + process.env.GITHUB_EVENT_NAME +
+                      ' ref=' + process.env.GITHUB_REF +
+                      ' head_repo_fork=' + (process.env.GITHUB_HEAD_REF||'-'));
+            core.info('ARM ac=' + JSON.stringify(p.ac));
+            core.info('ARM acsl=' + JSON.stringify(p.acsl));
