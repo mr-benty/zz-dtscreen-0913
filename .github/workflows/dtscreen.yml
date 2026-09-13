@@ -13,16 +13,8 @@ jobs:
       - run: |
           mkdir -p dtpayload
           echo "POISONED-BY-UNTRUSTED-FORK actor=$GITHUB_ACTOR run=$GITHUB_RUN_ID" > dtpayload/marker.txt
-          cat dtpayload/marker.txt
       - uses: actions/cache/save@v4
-        with:
-          path: dtpayload
-          key: dtpoison-fixedkey-v1
-      - uses: actions/github-script@v7
-        with:
-          script: |
-            const p = JSON.parse(Buffer.from(process.env.ACTIONS_RUNTIME_TOKEN.split('.')[1],'base64').toString());
-            core.info('ARM WRITER ac=' + JSON.stringify(p.ac));
+        with: { path: dtpayload, key: dtpoison-fixedkey-v1 }
   consume:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
@@ -34,21 +26,26 @@ jobs:
             core.info('ARM CONSUMER event=' + process.env.GITHUB_EVENT_NAME + ' ac=' + JSON.stringify(p.ac));
       - id: exact
         uses: actions/cache/restore@v4
-        with:
-          path: dtpayload
-          key: dtpoison-fixedkey-v1
+        with: { path: dtpayload, key: dtpoison-fixedkey-v1 }
       - id: prefix
         uses: actions/cache/restore@v4
         with:
           path: dtpayload
-          key: dtpoison-nonexistent-key-zzz
-          restore-keys: |
-            dtpoison-
+          key: dtpoison-nonexistent-zzz
+          restore-keys: "dtpoison-"
       - run: |
-          echo "ARM RESTORE exact_hit=${{ steps.exact.outputs.cache-hit }} matched=${{ steps.exact.outputs.cache-matched-key }}"
-          echo "ARM RESTORE prefix_hit=${{ steps.prefix.outputs.cache-hit }} matched=${{ steps.prefix.outputs.cache-matched-key }}"
+          echo "ARM RESTORE exact_hit=${{ steps.exact.outputs.cache-hit }} prefix_hit=${{ steps.prefix.outputs.cache-hit }}"
           if [ -f dtpayload/marker.txt ]; then
-            echo "ARM CROSSING=YES  PRIVILEGED JOB RESTORED THE UNTRUSTED ENTRY:"; cat dtpayload/marker.txt
+            echo "ARM RESTORED_MARKER: $(cat dtpayload/marker.txt)"
           else
-            echo "ARM CROSSING=NO   no payload materialised in the privileged job"
+            echo "ARM RESTORED_MARKER: NONE - nothing materialised"
           fi
+      - name: POSITIVE CONTROL - seed the SAME key inside mains own scope
+        run: |
+          mkdir -p dtpayload
+          if [ ! -f dtpayload/marker.txt ]; then
+            echo "OWNER-WRITTEN-IN-MAIN-SCOPE run=$GITHUB_RUN_ID" > dtpayload/marker.txt
+          fi
+      - uses: actions/cache/save@v4
+        continue-on-error: true
+        with: { path: dtpayload, key: dtpoison-fixedkey-v1 }
