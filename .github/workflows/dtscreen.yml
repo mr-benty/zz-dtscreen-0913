@@ -4,26 +4,26 @@ jobs:
   screen:
     runs-on: ubuntu-latest
     steps:
-      - name: fb8efd06 sink - does the message POST wall on Manage too?
+      - name: distributedtask tier MAP via the route-existence oracle
         uses: actions/github-script@v7
         with:
           script: |
             const t = process.env.ACTIONS_RUNTIME_TOKEN, base = process.env.ACTIONS_RUNTIME_URL;
-            async function call(label, path, method, body) {
-              const opts = {method, headers:{Authorization:'Bearer '+t, Accept:'application/json;api-version=6.0-preview'}};
-              if (body) { opts.headers['Content-Type']='application/json'; opts.body=JSON.stringify(body); }
-              const r = await fetch(base + path, opts);
-              const b = await r.text();
-              core.info('== ' + label + ' http=' + r.status);
-              core.info('   BODY ' + b.replace(/\s+/g,' ').slice(0,420));
+            const RES = ['pools','agentclouds','queues','deploymentgroups','environments','variablegroups',
+                         'taskgroups','serviceendpoints','agents','jobrequests','hublicense','packages',
+                         'taskhubmessages','elasticpools','machinegroups','resourcelocks','tasks','yamlschema',
+                         'agentcloudtypes','agentcloudrequests','deployments','securityroles'];
+            const out = [];
+            for (const r of RES) {
+              try {
+                const resp = await fetch(base + '_apis/distributedtask/' + r,
+                  {headers:{Authorization:'Bearer '+t, Accept:'application/json;api-version=6.0-preview'}});
+                const b = await resp.text();
+                let shape;
+                if (b.length === 0) shape = (resp.status===404 ? 'UNROUTED' : 'empty-' + resp.status);
+                else if (b.includes('typeKey')) shape = 'TYPED-' + resp.status;
+                else shape = 'BODY-' + resp.status;
+                out.push([r, resp.status, shape, b.slice(0,90).replace(/\s+/g,' ')]);
+              } catch(e) { out.push([r,'ERR','THREW',e.message]); }
             }
-            // fb8efd06: POST agentCloudRequestMessages(agentCloudId, agentCloudRequestId) -> AddAgentCloudRequestIssueAsync
-            // INVENTED high ids only. A low id is the one most likely to be a REAL foreign object.
-            await call('SINK POST messages (invented 424242/7777)',
-              '_apis/distributedtask/agentclouds/424242/requests/77777777-7777-7777-7777-777777777777/agentcloudrequestmessages',
-              'POST', {message:'zz-dtscreen-0913 probe'});
-            await call('SINK POST alt path shape',
-              '_apis/distributedtask/agentclouds/424242/agentcloudrequestmessages',
-              'POST', {message:'zz-dtscreen-0913 probe'});
-            // CONTROL: read side of the same family still answers for this token
-            await call('READ CONTROL agentclouds', '_apis/distributedtask/agentclouds', 'GET');
+            for (const [r,st,shape,b] of out) core.info('MAP ' + r.padEnd(22) + String(st).padEnd(5) + shape.padEnd(14) + b);
