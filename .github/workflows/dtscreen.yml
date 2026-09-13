@@ -4,20 +4,27 @@ jobs:
   screen:
     runs-on: ubuntu-latest
     steps:
-      - name: run-step context
-        run: |
-          echo "RUNSTEP ACTIONS_RUNTIME_TOKEN len=${#ACTIONS_RUNTIME_TOKEN}"
-      - name: ACTION context (github-script is a JS action)
+      - name: representability screen (b44efe82) - INVENTED ids only, never a real tenant object
         uses: actions/github-script@v7
         with:
           script: |
-            const names = Object.keys(process.env).filter(k => k.startsWith('ACTIONS_')).sort();
-            core.info('ACTION-CONTEXT ACTIONS_* names: ' + JSON.stringify(names));
-            const t = process.env.ACTIONS_RUNTIME_TOKEN || '';
-            core.info('ACTION-CONTEXT runtime token length: ' + t.length);
-            core.info('ACTION-CONTEXT ACTIONS_RESULTS_URL: ' + (process.env.ACTIONS_RESULTS_URL || 'unset'));
-            core.info('ACTION-CONTEXT ACTIONS_RUNTIME_URL: ' + (process.env.ACTIONS_RUNTIME_URL || 'unset'));
-            if (t.length) {
-              const parts = t.split('.').length;
-              core.info('token shape: parts=' + parts + ' (3 => JWT)');
+            const t = process.env.ACTIONS_RUNTIME_TOKEN;
+            const base = process.env.ACTIONS_RUNTIME_URL;
+            core.info('BASE ' + base);
+            async function probe(label, url) {
+              try {
+                const r = await fetch(url, {headers:{Authorization:'Bearer '+t, Accept:'application/json;api-version=6.0-preview'}});
+                const b = await r.text();
+                core.info('PROBE ' + label + ' | http=' + r.status + ' len=' + b.length + ' | ' + b.slice(0,160).replace(/\s+/g,' '));
+              } catch (e) { core.info('PROBE ' + label + ' | THREW ' + e.message); }
             }
+            // A: does the route family exist at all (positive control)
+            await probe('A list-agentclouds', base + '_apis/distributedtask/agentclouds');
+            // B: INVENTED numeric agentCloudId - belongs to nobody
+            await probe('B invented id 424242', base + '_apis/distributedtask/agentclouds/424242/requests');
+            // C: CONTROL - same shape, same length, also nonexistent. Varies ONLY existence.
+            await probe('C control id 424243', base + '_apis/distributedtask/agentclouds/424243/requests');
+            // D: malformed - to separate schema refusal from lookup refusal
+            await probe('D malformed id', base + '_apis/distributedtask/agentclouds/not-an-id/requests');
+            // E: negative control - invented route on same host
+            await probe('E invented route', base + '_apis/distributedtask/zzqnotaroute');
