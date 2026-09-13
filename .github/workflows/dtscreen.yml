@@ -4,7 +4,7 @@ jobs:
   screen:
     runs-on: ubuntu-latest
     steps:
-      - name: ENTITLEMENT DISCRIMINATOR - read the refusal BODY, not the code
+      - name: does authz fire AFTER validation? (dispatch-before-guard test)
         uses: actions/github-script@v7
         with:
           script: |
@@ -15,15 +15,14 @@ jobs:
               const r = await fetch(base + path, opts);
               const b = await r.text();
               core.info('== ' + label + ' http=' + r.status);
-              core.info('   BODY ' + b.replace(/\s+/g,' ').slice(0,600));
+              core.info('   BODY ' + b.replace(/\s+/g,' ').slice(0,520));
             }
-            // The registration attempt. Minimal well-formed body: a VALIDATION error means we passed the
-            // entitlement gate; "Feature not available" means we did not; 404 means no standing.
-            await call('POST create agentcloud (disposable name)',
-                       '_apis/distributedtask/agentclouds', 'POST',
-                       {name:'zz-dtscreen-0913-disposable', type:'zz-probe', acquireAgentEndpoint:false});
-            // Control A: the same verb on the adjacent family we KNOW answers read-side
-            await call('POST create pool (adjacent family control)',
-                       '_apis/distributedtask/pools', 'POST', {name:'zz-dtscreen-0913-pool'});
-            // Control B: read side still works in this same run
-            await call('GET agentclouds (read control)', '_apis/distributedtask/agentclouds', 'GET');
+            // OWNER-SIDE BASELINE BEFORE the mutating arm (attributability)
+            await call('BASELINE agentclouds BEFORE', '_apis/distributedtask/agentclouds', 'GET');
+            // Well-formed body: satisfies the stated validation. If authz runs AFTER validation we now see 403.
+            await call('POST well-formed agentcloud', '_apis/distributedtask/agentclouds', 'POST',
+                       {name:'zz-dtscreen-0913-disposable', type:'zz-probe',
+                        sharedSecret:'zzDTSCREEN0913disposableProbeSecret', acquireAgentEndpoint:false,
+                        acquisitionTimeout:900, maxParallelism:1});
+            // POST-STATE as its own round trip
+            await call('POST-STATE agentclouds AFTER', '_apis/distributedtask/agentclouds', 'GET');
