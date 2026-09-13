@@ -1,0 +1,14 @@
+name: dtscreen
+on: workflow_dispatch
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    steps:
+      - name: which ACTIONS_* vars exist (NAMES ONLY, never values)
+        run: |
+          echo "--- ACTIONS_* variable NAMES present in this step ---"
+          env | grep -oE '^ACTIONS_[A-Z_]+' | sort || echo "(none)"
+          echo "--- runtime token present? (length only) ---"
+          echo "ACTIONS_RUNTIME_TOKEN length: ${#ACTIONS_RUNTIME_TOKEN}"
+          echo "ACTIONS_RUNTIME_URL: ${ACTIONS_RUNTIME_URL:-unset}"
+          echo "ACTIONS_RESULTS_URL: ${ACTIONS_RESULTS_URL:-unset}"
