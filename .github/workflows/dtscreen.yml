@@ -4,26 +4,26 @@ jobs:
   screen:
     runs-on: ubuntu-latest
     steps:
-      - name: distributedtask tier MAP via the route-existence oracle
+      - name: SUB-RESOURCE sweep under the two routed families - invented high ids only
         uses: actions/github-script@v7
         with:
           script: |
             const t = process.env.ACTIONS_RUNTIME_TOKEN, base = process.env.ACTIONS_RUNTIME_URL;
-            const RES = ['pools','agentclouds','queues','deploymentgroups','environments','variablegroups',
-                         'taskgroups','serviceendpoints','agents','jobrequests','hublicense','packages',
-                         'taskhubmessages','elasticpools','machinegroups','resourcelocks','tasks','yamlschema',
-                         'agentcloudtypes','agentcloudrequests','deployments','securityroles'];
-            const out = [];
-            for (const r of RES) {
-              try {
-                const resp = await fetch(base + '_apis/distributedtask/' + r,
-                  {headers:{Authorization:'Bearer '+t, Accept:'application/json;api-version=6.0-preview'}});
-                const b = await resp.text();
-                let shape;
-                if (b.length === 0) shape = (resp.status===404 ? 'UNROUTED' : 'empty-' + resp.status);
-                else if (b.includes('typeKey')) shape = 'TYPED-' + resp.status;
-                else shape = 'BODY-' + resp.status;
-                out.push([r, resp.status, shape, b.slice(0,90).replace(/\s+/g,' ')]);
-              } catch(e) { out.push([r,'ERR','THREW',e.message]); }
+            const SUB = ['agents','messages','requests','jobrequests','maintenancedefinitions','maintenancejobs',
+                         'permissions','users','metadata','settings','targets','sessions','types'];
+            async function shape(path) {
+              const r = await fetch(base + path, {headers:{Authorization:'Bearer '+t, Accept:'application/json;api-version=6.0-preview'}});
+              const b = await r.text();
+              let s;
+              if (b.length===0) s = (r.status===404 ? 'UNROUTED' : 'empty-'+r.status);
+              else if (b.includes('typeKey')) s = 'TYPED-'+r.status;
+              else s = 'BODY-'+r.status;
+              return [r.status, s, b.slice(0,80).replace(/\s+/g,' ')];
             }
-            for (const [r,st,shape,b] of out) core.info('MAP ' + r.padEnd(22) + String(st).padEnd(5) + shape.padEnd(14) + b);
+            for (const fam of ['agentclouds/424242','pools/424242']) {
+              for (const sub of SUB) {
+                const [st,s,b] = await shape('_apis/distributedtask/' + fam + '/' + sub);
+                if (s !== 'UNROUTED') core.info('SUB ' + (fam+'/'+sub).padEnd(34) + String(st).padEnd(5) + s.padEnd(13) + b);
+              }
+            }
+            core.info('SUB --- only NON-UNROUTED rows printed above; everything else 404-empty ---');
