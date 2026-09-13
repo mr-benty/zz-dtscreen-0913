@@ -16,18 +16,19 @@ jobs:
             const t = process.env.ACTIONS_RUNTIME_TOKEN;
             const p = JSON.parse(Buffer.from(t.split('.')[1],'base64').toString());
             core.info('ARM event=' + process.env.GITHUB_EVENT_NAME +
-                      ' ref=' + process.env.GITHUB_REF +
-                      ' head_repo_fork=' + (process.env.GITHUB_HEAD_REF||'-'));
+                      ' actor=' + process.env.GITHUB_ACTOR +
+                      ' ref=' + process.env.GITHUB_REF);
             core.info('ARM ac=' + JSON.stringify(p.ac));
-            core.info('ARM acsl=' + JSON.stringify(p.acsl));
-            core.info('ARM claimkeys=' + JSON.stringify(Object.keys(p).sort()));
-            core.info('ARM scp=' + JSON.stringify(p.scp));
-            core.info('ARM orchid=' + JSON.stringify(p.orchid));
-            core.info('ARM runnerctx=' + JSON.stringify({
-              run_id: process.env.GITHUB_RUN_ID,
-              base: process.env.GITHUB_BASE_REF || '-',
-              sha: process.env.GITHUB_SHA,
-              repo: process.env.GITHUB_REPOSITORY,
-              actor: process.env.GITHUB_ACTOR,
-              tokperm: 'see-below'
+            core.info('ARM TRUST=' + JSON.stringify({
+              trust_tier: p.trust_tier,
+              run_type: p.run_type,
+              repository_visibility: p.repository_visibility,
+              IdentityTypeClaim: p.IdentityTypeClaim,
+              runner_type: p.runner_type,
+              acsl: p.acsl,
+              repository_id: p.repository_id,
+              repository_owner_id: p.repository_owner_id,
+              owner_id: p.owner_id,
+              billing_owner_id: p.billing_owner_id,
+              job_workflow_ref: p.job_workflow_ref
             }));
