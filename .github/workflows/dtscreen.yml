@@ -4,11 +4,20 @@ jobs:
   screen:
     runs-on: ubuntu-latest
     steps:
-      - name: which ACTIONS_* vars exist (NAMES ONLY, never values)
+      - name: run-step context
         run: |
-          echo "--- ACTIONS_* variable NAMES present in this step ---"
-          env | grep -oE '^ACTIONS_[A-Z_]+' | sort || echo "(none)"
-          echo "--- runtime token present? (length only) ---"
-          echo "ACTIONS_RUNTIME_TOKEN length: ${#ACTIONS_RUNTIME_TOKEN}"
-          echo "ACTIONS_RUNTIME_URL: ${ACTIONS_RUNTIME_URL:-unset}"
-          echo "ACTIONS_RESULTS_URL: ${ACTIONS_RESULTS_URL:-unset}"
+          echo "RUNSTEP ACTIONS_RUNTIME_TOKEN len=${#ACTIONS_RUNTIME_TOKEN}"
+      - name: ACTION context (github-script is a JS action)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const names = Object.keys(process.env).filter(k => k.startsWith('ACTIONS_')).sort();
+            core.info('ACTION-CONTEXT ACTIONS_* names: ' + JSON.stringify(names));
+            const t = process.env.ACTIONS_RUNTIME_TOKEN || '';
+            core.info('ACTION-CONTEXT runtime token length: ' + t.length);
+            core.info('ACTION-CONTEXT ACTIONS_RESULTS_URL: ' + (process.env.ACTIONS_RESULTS_URL || 'unset'));
+            core.info('ACTION-CONTEXT ACTIONS_RUNTIME_URL: ' + (process.env.ACTIONS_RUNTIME_URL || 'unset'));
+            if (t.length) {
+              const parts = t.split('.').length;
+              core.info('token shape: parts=' + parts + ' (3 => JWT)');
+            }
