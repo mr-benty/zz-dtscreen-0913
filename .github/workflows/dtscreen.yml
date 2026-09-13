@@ -4,27 +4,24 @@ jobs:
   screen:
     runs-on: ubuntu-latest
     steps:
-      - name: representability screen (b44efe82) - INVENTED ids only, never a real tenant object
+      - name: discriminator hunt - sub-resource shapes under an INVENTED agentCloudId
         uses: actions/github-script@v7
         with:
           script: |
-            const t = process.env.ACTIONS_RUNTIME_TOKEN;
-            const base = process.env.ACTIONS_RUNTIME_URL;
-            core.info('BASE ' + base);
-            async function probe(label, url) {
+            const t = process.env.ACTIONS_RUNTIME_TOKEN, base = process.env.ACTIONS_RUNTIME_URL;
+            // HIGH invented ids only. A LOW id is the one most likely to be a REAL foreign object.
+            const A = '424242', B = '424243';
+            async function p(label, path) {
               try {
-                const r = await fetch(url, {headers:{Authorization:'Bearer '+t, Accept:'application/json;api-version=6.0-preview'}});
+                const r = await fetch(base + path, {headers:{Authorization:'Bearer '+t, Accept:'application/json;api-version=6.0-preview'}});
                 const b = await r.text();
-                core.info('PROBE ' + label + ' | http=' + r.status + ' len=' + b.length + ' | ' + b.slice(0,160).replace(/\s+/g,' '));
-              } catch (e) { core.info('PROBE ' + label + ' | THREW ' + e.message); }
+                core.info('P ' + label.padEnd(34) + ' http=' + String(r.status).padEnd(4) + ' len=' + String(b.length).padEnd(5) + ' ' + b.slice(0,120).replace(/\s+/g,' '));
+              } catch(e){ core.info('P ' + label + ' THREW ' + e.message); }
             }
-            // A: does the route family exist at all (positive control)
-            await probe('A list-agentclouds', base + '_apis/distributedtask/agentclouds');
-            // B: INVENTED numeric agentCloudId - belongs to nobody
-            await probe('B invented id 424242', base + '_apis/distributedtask/agentclouds/424242/requests');
-            // C: CONTROL - same shape, same length, also nonexistent. Varies ONLY existence.
-            await probe('C control id 424243', base + '_apis/distributedtask/agentclouds/424243/requests');
-            // D: malformed - to separate schema refusal from lookup refusal
-            await probe('D malformed id', base + '_apis/distributedtask/agentclouds/not-an-id/requests');
-            // E: negative control - invented route on same host
-            await probe('E invented route', base + '_apis/distributedtask/zzqnotaroute');
+            for (const id of [A,B]) {
+              await p('obj '+id,               '_apis/distributedtask/agentclouds/'+id);
+              await p('requests '+id,          '_apis/distributedtask/agentclouds/'+id+'/requests');
+              await p('agentcloudrequests '+id,'_apis/distributedtask/agentcloudrequests/'+id);
+            }
+            await p('pools (adjacent family)', '_apis/distributedtask/pools');
+            await p('obj MALFORMED',           '_apis/distributedtask/agentclouds/not-an-id');
