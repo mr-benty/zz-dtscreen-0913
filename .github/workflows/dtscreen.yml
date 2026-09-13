@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  pull_request_target:
 jobs:
   screen:
     runs-on: ubuntu-latest
@@ -19,3 +20,14 @@ jobs:
                       ' head_repo_fork=' + (process.env.GITHUB_HEAD_REF||'-'));
             core.info('ARM ac=' + JSON.stringify(p.ac));
             core.info('ARM acsl=' + JSON.stringify(p.acsl));
+            core.info('ARM claimkeys=' + JSON.stringify(Object.keys(p).sort()));
+            core.info('ARM scp=' + JSON.stringify(p.scp));
+            core.info('ARM orchid=' + JSON.stringify(p.orchid));
+            core.info('ARM runnerctx=' + JSON.stringify({
+              run_id: process.env.GITHUB_RUN_ID,
+              base: process.env.GITHUB_BASE_REF || '-',
+              sha: process.env.GITHUB_SHA,
+              repo: process.env.GITHUB_REPOSITORY,
+              actor: process.env.GITHUB_ACTOR,
+              tokperm: 'see-below'
+            }));
