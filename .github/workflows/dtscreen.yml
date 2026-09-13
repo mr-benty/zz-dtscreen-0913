@@ -4,16 +4,26 @@ jobs:
   screen:
     runs-on: ubuntu-latest
     steps:
-      - name: capture FULL error text - the discriminating evidence
+      - name: ENTITLEMENT DISCRIMINATOR - read the refusal BODY, not the code
         uses: actions/github-script@v7
         with:
           script: |
             const t = process.env.ACTIONS_RUNTIME_TOKEN, base = process.env.ACTIONS_RUNTIME_URL;
-            async function full(label, path) {
-              const r = await fetch(base + path, {headers:{Authorization:'Bearer '+t, Accept:'application/json;api-version=6.0-preview'}});
+            async function call(label, path, method, body) {
+              const opts = {method, headers:{Authorization:'Bearer '+t, Accept:'application/json;api-version=6.0-preview'}};
+              if (body) { opts.headers['Content-Type']='application/json'; opts.body=JSON.stringify(body); }
+              const r = await fetch(base + path, opts);
               const b = await r.text();
-              core.info('FULL ' + label + ' http=' + r.status);
-              core.info('BODY ' + b.replace(/\s+/g,' '));
+              core.info('== ' + label + ' http=' + r.status);
+              core.info('   BODY ' + b.replace(/\s+/g,' ').slice(0,600));
             }
-            await full('invented-A 424242', '_apis/distributedtask/agentclouds/424242');
-            await full('invented-B 999888777', '_apis/distributedtask/agentclouds/999888777');
+            // The registration attempt. Minimal well-formed body: a VALIDATION error means we passed the
+            // entitlement gate; "Feature not available" means we did not; 404 means no standing.
+            await call('POST create agentcloud (disposable name)',
+                       '_apis/distributedtask/agentclouds', 'POST',
+                       {name:'zz-dtscreen-0913-disposable', type:'zz-probe', acquireAgentEndpoint:false});
+            // Control A: the same verb on the adjacent family we KNOW answers read-side
+            await call('POST create pool (adjacent family control)',
+                       '_apis/distributedtask/pools', 'POST', {name:'zz-dtscreen-0913-pool'});
+            // Control B: read side still works in this same run
+            await call('GET agentclouds (read control)', '_apis/distributedtask/agentclouds', 'GET');
