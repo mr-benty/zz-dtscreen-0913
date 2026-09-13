@@ -4,7 +4,7 @@ jobs:
   screen:
     runs-on: ubuntu-latest
     steps:
-      - name: DOES AUTHZ EVER FIRE? url is RFC-reserved .invalid - cannot resolve, reaches nobody
+      - name: fb8efd06 sink - does the message POST wall on Manage too?
         uses: actions/github-script@v7
         with:
           script: |
@@ -15,14 +15,15 @@ jobs:
               const r = await fetch(base + path, opts);
               const b = await r.text();
               core.info('== ' + label + ' http=' + r.status);
-              core.info('   BODY ' + b.replace(/\s+/g,' ').slice(0,520));
+              core.info('   BODY ' + b.replace(/\s+/g,' ').slice(0,420));
             }
-            await call('BASELINE BEFORE', '_apis/distributedtask/agentclouds', 'GET');
-            await call('POST fully-valid body', '_apis/distributedtask/agentclouds', 'POST',
-                       {name:'zz-dtscreen-0913-disposable', type:'zz-probe',
-                        sharedSecret:'zzDTSCREEN0913disposableProbeSecret',
-                        acquireAgentEndpoint:'https://zz-dtscreen-0913.example.invalid/acquire',
-                        releaseAgentEndpoint:'https://zz-dtscreen-0913.example.invalid/release',
-                        getAgentRequestStatusEndpoint:'https://zz-dtscreen-0913.example.invalid/status',
-                        acquisitionTimeout:900, maxParallelism:1});
-            await call('POST-STATE AFTER (own round trip)', '_apis/distributedtask/agentclouds', 'GET');
+            // fb8efd06: POST agentCloudRequestMessages(agentCloudId, agentCloudRequestId) -> AddAgentCloudRequestIssueAsync
+            // INVENTED high ids only. A low id is the one most likely to be a REAL foreign object.
+            await call('SINK POST messages (invented 424242/7777)',
+              '_apis/distributedtask/agentclouds/424242/requests/77777777-7777-7777-7777-777777777777/agentcloudrequestmessages',
+              'POST', {message:'zz-dtscreen-0913 probe'});
+            await call('SINK POST alt path shape',
+              '_apis/distributedtask/agentclouds/424242/agentcloudrequestmessages',
+              'POST', {message:'zz-dtscreen-0913 probe'});
+            // CONTROL: read side of the same family still answers for this token
+            await call('READ CONTROL agentclouds', '_apis/distributedtask/agentclouds', 'GET');
